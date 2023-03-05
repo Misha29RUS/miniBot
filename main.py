@@ -1,6 +1,7 @@
 import telebot
 from telebot import types
 from time import sleep
+import sqlite3
 
 bot = telebot.TeleBot('5818550349:AAF4vY8XTiogETFKsVoMZgvsjnv6Unxdj4g')
 
@@ -9,6 +10,7 @@ command = {
         'id': "Дай id",
         'photo': "Дай фото",
         'home': "👈 На главную",
+        'base': "Запиши меня в базу",
     }
 
 toxic_list = {
@@ -16,6 +18,26 @@ toxic_list = {
         'chert': "чмо",
         'chmo': "чёрт",
     }
+
+
+@bot.message_handler(commands=['startbase'])
+@bot.message_handler(func=lambda message: message.text == command['base'])
+def start(message):
+    name = bot.send_message(message.chat.id, "Как тебя записать?")
+    bot.register_next_step_handler(name, nickname)
+
+
+def nickname(message):
+    connect = sqlite3.connect('users.db')
+    cursor = connect.cursor()
+    cursor.execute("""CREATE TABLE IF NOT EXISTS login_name(
+        name INTEGER    
+    )""")
+    connect.commit()
+    user_name = [message.text]
+    cursor.execute("INSERT INTO login_name VALUES(?);", user_name)
+    connect.commit()
+    bot.send_message(message.chat.id, 'Отлично, записал!')
 
 
 @bot.message_handler(commands=['start'])
@@ -38,7 +60,8 @@ def start(message):
     btn2 = types.KeyboardButton(f'{command["id"]}')
     btn3 = types.KeyboardButton(f'{command["photo"]}')
     btn4 = types.KeyboardButton(f'{command["home"]}')
-    markup.add(btn1, btn2, btn3, btn4)
+    btn5 = types.KeyboardButton(f'{command["base"]}')
+    markup.add(btn1, btn2, btn3, btn4, btn5)
     command_list = '\n'.join(list(command.values()))
     n = '\n'
     bot.send_message(message.from_user.id, f"Что выбирите: {n}{command_list}", reply_markup=markup)
