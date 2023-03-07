@@ -2,6 +2,10 @@ import telebot
 from telebot import types
 from time import sleep
 import sqlite3
+from jinja2 import Environment, FileSystemLoader
+import imgkit
+import pdfkit
+import io
 
 bot = telebot.TeleBot('5818550349:AAF4vY8XTiogETFKsVoMZgvsjnv6Unxdj4g')
 
@@ -11,6 +15,8 @@ command = {
         'photo': "Дай фото",
         'home': "👈 На главную",
         'base': "Запиши меня в базу",
+        'newPhoto': "Сгенерируй фото по данным",
+        'newPDF': "Сгенерируй пдф по данным"
     }
 
 toxic_list = {
@@ -18,6 +24,71 @@ toxic_list = {
         'chert': "чмо",
         'chmo': "чёрт",
     }
+
+
+@bot.message_handler(commands=['newphoto'])
+@bot.message_handler(func=lambda message: message.text == command['newPhoto'])
+def start(message):
+    msg = bot.send_message(message.chat.id, "Давай начнём генерацию фото! Представься.")
+    bot.register_next_step_handler(msg, start2)
+
+
+def start2(message):
+    msg = bot.send_message(message.chat.id, "Сколько тебе лет?")
+    bot.register_next_step_handler(msg, start3, message.text)
+
+
+def start3(message, value):
+    msg = bot.send_message(message.chat.id, "Отлично! Какими навыкими обладаешь?")
+    bot.register_next_step_handler(msg, start4, value, message.text)
+
+
+def start4(message, value1, value2):
+    c = imgkit.config(wkhtmltoimage=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltoimage.exe')
+    env = Environment(loader=FileSystemLoader('./'))
+    template = env.get_template("template.html")
+    pdf_template = template.render(
+        {'profession_name': f'{value1}',
+         'pro_age': f'{value2}',
+         'pro_skill': f'{message.text}'
+         })
+    flike = io.BytesIO(imgkit.from_string(pdf_template, False, config=c, options={"enable-local-file-access": ""}))
+    # flike = io.BytesIO(imgkit.from_string(pdf_template, False, config=c,
+    #                                       options={"enable-local-file-access": "", 'width': 500, 'height': 500}))
+    bot.send_message(message.chat.id, 'Вот фото')
+    bot.send_photo(message.chat.id, ('card.jpg', flike))
+
+
+@bot.message_handler(commands=['newpdf'])
+@bot.message_handler(func=lambda message: message.text == command['newPDF'])
+def start(message):
+    msg = bot.send_message(message.chat.id, "Давай начнём генерацию пдф! Представься.")
+    bot.register_next_step_handler(msg, start5)
+
+
+def start5(message):
+    msg = bot.send_message(message.chat.id, "Сколько тебе лет?")
+    bot.register_next_step_handler(msg, start6, message.text)
+
+
+def start6(message, value):
+    msg = bot.send_message(message.chat.id, "Отлично! Какими навыкими обладаешь?")
+    bot.register_next_step_handler(msg, start7, value, message.text)
+
+
+def start7(message, value1, value2):
+    c = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
+    env = Environment(loader=FileSystemLoader('./'))
+    template = env.get_template("templatePDF.html")
+    pdf_template = template.render(
+        {'profession_name': f'{value1}',
+         'pro_age': f'{value2}',
+         'pro_skill': f'{message.text}'
+         })
+    options = {"enable-local-file-access": ""}
+    flike = io.BytesIO(pdfkit.from_string(pdf_template, False, configuration=c, options=options))
+    bot.send_message(message.chat.id, 'Вот пдф')
+    bot.send_document(message.chat.id, ('card.pdf', flike))
 
 
 @bot.message_handler(commands=['startbase'])
@@ -60,8 +131,10 @@ def start(message):
     btn2 = types.KeyboardButton(f'{command["id"]}')
     btn3 = types.KeyboardButton(f'{command["photo"]}')
     btn4 = types.KeyboardButton(f'{command["home"]}')
-    btn5 = types.KeyboardButton(f'{command["base"]}')
-    markup.add(btn1, btn2, btn3, btn4, btn5)
+    btn5 = types.KeyboardButton(f'{command["newPhoto"]}')
+    btn6 = types.KeyboardButton(f'{command["newPDF"]}')
+    btn7 = types.KeyboardButton(f'{command["base"]}')
+    markup.add(btn1, btn2, btn3, btn4, btn5, btn6, btn7)
     command_list = '\n'.join(list(command.values()))
     n = '\n'
     bot.send_message(message.from_user.id, f"Что выбирите: {n}{command_list}", reply_markup=markup)
