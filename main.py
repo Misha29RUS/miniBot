@@ -99,7 +99,7 @@ def start(message):
 
 
 def nickname(message):
-    connect = sqlite3.connect('users.db')
+    connect = sqlite3.connect('users.sqlite3')
     cursor = connect.cursor()
     cursor.execute("""CREATE TABLE IF NOT EXISTS login_name(
         name INTEGER    
@@ -108,7 +108,9 @@ def nickname(message):
     user_name = [message.text]
     cursor.execute("INSERT INTO login_name VALUES(?);", user_name)
     connect.commit()
-    bot.send_message(message.chat.id, 'Отлично, записал!')
+    cursor.execute('SELECT * FROM login_name')
+    count = len(cursor.fetchall())
+    bot.send_message(message.chat.id, f'Отлично, записал! Сейчас тут { count } поля')
 
 
 @bot.message_handler(commands=['start'])
